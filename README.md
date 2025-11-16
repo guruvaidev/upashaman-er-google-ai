@@ -10,6 +10,7 @@ Deployed on Google AI Studio: https://upasham-er-602054782615.us-west1.run.app/
 
 Lovable App:
 Also built on Lovable: https://upashaman-er.lovable.app/
+Git repo: https://github.com/guruvaidev/upashaman-er-82bebd0f
 
 
 # Run and deploy your AI Studio app
