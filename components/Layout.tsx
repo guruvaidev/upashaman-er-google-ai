@@ -16,7 +16,7 @@ const Layout: React.FC = () => {
     return (
         <div className="min-h-screen bg-background flex flex-col">
             <header className="fixed top-0 left-0 right-0 h-16 bg-card/80 backdrop-blur-sm z-10 flex items-center justify-between px-4 border-b border-border">
-                <h1 className="text-xl font-bold text-primary">Upasham-ER</h1>
+                <h1 className="text-xl font-bold text-primary">Upashaman-ER</h1>
                 <button className="p-2 rounded-full hover:bg-secondary">
                     <SettingsIcon className="w-6 h-6 text-foreground" />
                 </button>
