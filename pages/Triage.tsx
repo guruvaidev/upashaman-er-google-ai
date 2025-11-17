@@ -139,7 +139,10 @@ const Triage: React.FC = () => {
             <h2 className="text-xl font-semibold mb-4">Assessment Result</h2>
             <div className="space-y-4">
                 <p><strong className="text-primary">Summary:</strong> {result.summary}</p>
-                <p><strong className="text-primary">Expert Guidance:</strong> {result.expert_guidance}</p>
+                <div>
+                    <strong className="text-primary">Expert Guidance:</strong>
+                    <p className="whitespace-pre-wrap mt-1">{result.expert_guidance}</p>
+                </div>
                 
                 <Suspense fallback={<EchartSuspenseFallback />}>
                     <ReactECharts option={result.echartsOption} theme="dark" style={{ height: '300px' }}/>

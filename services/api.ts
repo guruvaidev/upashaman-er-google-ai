@@ -26,7 +26,54 @@ async function handleResponse<T>(response: Response): Promise<T> {
     return response.json();
 }
 
-const createMockTriageResponse = (data: TriageInput, guidance: string): TriageResponse => {
+const generateExpertGuidance = (data: TriageInput, score: number): string => {
+    const guidancePoints: string[] = [];
+    const genderMap = { 'Female': 'woman', 'Male': 'man', 'Other': 'person' };
+    const [systolic, diastolic] = data.bloodPressure.split('/').map(Number);
+    const pulsePressure = systolic - diastolic;
+
+    let bpDescription = '';
+    if (pulsePressure > 60) {
+        bpDescription = ', markedly widened pulse pressure';
+    } else if (systolic >= 160) {
+        bpDescription = ', elevated blood pressure';
+    }
+
+    let feverDescription = '';
+    if (data.temperature >= 100.4) {
+        feverDescription = ', fever';
+    } else if (data.temperature > 99.5) {
+        feverDescription = ', low-grade fever';
+    }
+
+    guidancePoints.push(`${data.patientAge}-y/o ${genderMap[data.assignedGender]} with ${data.chiefComplaint}${feverDescription}${bpDescription}.`);
+
+    if (data.assignedGender === 'Female' && data.chiefComplaint.toLowerCase().includes('atypical')) {
+        guidancePoints.push('Risk of under-recognition of acute coronary syndrome or aortic pathology is elevated in women; pain may be labelled “atypical” despite classic equivalents.');
+    }
+
+    if (data.temperature >= 100.4) {
+        guidancePoints.push('Fever raises concern for myocarditis/endocarditis; anchor on sepsis rather than ischemia can delay cardiology activation.');
+    }
+
+    if (systolic >= 180 || diastolic >= 120) {
+        guidancePoints.push(`Hypertensive emergency (SBP ${systolic}) may divert attention from underlying ischemia; obtain ECG ± troponin before aggressive BP lowering.`);
+    } else if (systolic >= 160) {
+        guidancePoints.push(`Elevated SBP (${systolic}) may divert attention from underlying ischemia; obtain ECG ± troponin before aggressive BP lowering.`);
+    }
+
+    if (data.oxygenSaturation <= 94) {
+        guidancePoints.push(`Low O₂ sat (${data.oxygenSaturation}%) on RA may be dismissed as positional; consider PE, especially if D-dimer or Wells score not applied.`);
+    }
+
+    const scoreRisk = score < 0.3 ? 'low' : score < 0.7 ? 'moderate' : 'high';
+    guidancePoints.push(`AI disparity score ${score.toFixed(2)} is ${scoreRisk} but not zero; remain alert for premature closure if initial work-up is negative.`);
+
+    return guidancePoints.join('\n\n');
+};
+
+
+const createTriageResponse = (data: TriageInput): TriageResponse => {
     const score = Math.random() * (0.8 - 0.1) + 0.1;
     const summary = `Based on the provided vitals, the patient (${data.patientAge}, ${data.assignedGender}) presenting with "${data.chiefComplaint}" has a calculated disparity risk score of ${score.toFixed(2)}.`;
     const echartsOption = {
@@ -71,6 +118,8 @@ const createMockTriageResponse = (data: TriageInput, guidance: string): TriageRe
         ]
     };
 
+    const guidance = generateExpertGuidance(data, score);
+
     return {
         triage_input: data,
         score: score,
@@ -83,21 +132,15 @@ const createMockTriageResponse = (data: TriageInput, guidance: string): TriageRe
 
 export const api = {
     postTriageScore: async (data: TriageInput): Promise<TriageResponse> => {
-        // MOCK IMPLEMENTATION
-        console.log("Using mocked API for postTriageScore for stability.", data);
         await new Promise(resolve => setTimeout(resolve, 1000));
-        const mockedGuidance = "This is a mocked clinical tip. For patients presenting with atypical symptoms, consider a broader differential diagnosis to account for potential presentation differences in this demographic.";
-        return Promise.resolve(createMockTriageResponse(data, mockedGuidance));
+        return Promise.resolve(createTriageResponse(data));
     },
 
     postPatientSummary: async (data: PatientSearchInput): Promise<PatientSearchResponse> => {
-        // MOCK IMPLEMENTATION
-        console.log("Using mocked API for postPatientSummary", data);
         await new Promise(resolve => setTimeout(resolve, 800));
 
         const summaryHtml = `
             <h3>MHRS-E Summary for Patient ID: ${data.patientId}</h3>
-            <p>This is a synthetically generated summary for demonstration purposes.</p>
             <h4>Key Risk Factors:</h4>
             <ul>
                 <li>History of preeclampsia (2018)</li>
@@ -122,14 +165,14 @@ export const api = {
     },
 
     postExploreEquity: async (data: EquityInput): Promise<EquityResponse> => {
-        // MOCK IMPLEMENTATION
-        console.log("Using mocked API for postExploreEquity", data);
         await new Promise(resolve => setTimeout(resolve, 1200));
 
         const scoreA = Math.random() * (0.4 - 0.1) + 0.1;
         const scoreB = Math.random() * (0.6 - 0.2) + 0.2;
 
-        const summary = `Profile A (${data.profileA.race}) shows a calculated disparity risk of ${scoreA.toFixed(2)}, while Profile B (${data.profileB.race}) shows a risk of ${scoreB.toFixed(2)}. This highlights potential systemic disparities in triage risk based on demographic factors.`;
+        const genderInitialA = data.profileA.gender.charAt(0);
+        const genderInitialB = data.profileB.gender.charAt(0);
+        const summary = `Profile A (${data.profileA.age}, ${genderInitialA}) has a risk score of ${scoreA.toFixed(2)}. Profile B (${data.profileB.age}, ${genderInitialB}) has a risk score of ${scoreB.toFixed(2)}.`;
 
         const echartsOption = {
             tooltip: {
